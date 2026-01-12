@@ -1,0 +1,1 @@
+UPDATE urls SET access_count = 0 WHERE access_count IS NULL;

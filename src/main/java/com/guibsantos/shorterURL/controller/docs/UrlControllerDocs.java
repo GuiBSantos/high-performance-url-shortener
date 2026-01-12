@@ -1,0 +1,40 @@
+package com.guibsantos.shorterURL.controller.docs;
+
+import com.guibsantos.shorterURL.controller.dto.request.ShortenUrlRequest;
+import com.guibsantos.shorterURL.controller.dto.response.ShortenUrlResponse;
+import com.guibsantos.shorterURL.controller.dto.response.UrlStatsResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@Tag(name = "URL Shortener", description = "Endpoints para gerenciar e encurtar URLs")
+public interface UrlControllerDocs {
+
+    @Operation(summary = "Obter estatísticas da URL", description = "Retorna o número total de acessos (cliques) de uma URL encurtada")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Estatísticas retornadas com sucesso"),
+            @ApiResponse(responseCode = "404", description = "URL não encontrada")
+    })
+    ResponseEntity<UrlStatsResponse> getUrlStats(@PathVariable String shortCode);
+
+    @Operation(summary = "Encurtar URL", description = "Recebe uma URL original e retorna um código encurtado de 6 caracteres.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "URL encurtada com sucesso",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShortenUrlResponse.class))),
+            @ApiResponse(responseCode = "400", description = "URL inválida ou payload mal formatado", content = @Content)
+    })
+    ResponseEntity<ShortenUrlResponse> shortenUrl(ShortenUrlRequest request, HttpServletRequest servletRequest);
+
+    @Operation(summary = "Redirecionar", description = "Recebe um código encurtado e redireciona para a URL original.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "302", description = "Redirecionamento encontrado e executado", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Código não encontrado ou expirado", content = @Content)
+    })
+    ResponseEntity<Void> redirect(String shortCode);
+}
