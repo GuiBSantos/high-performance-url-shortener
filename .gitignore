@@ -20,3 +20,9 @@ logs/
 
 .env
 *.env
+
+infra/keys/
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.backup
+.env

@@ -1,0 +1,62 @@
+- hosts: all
+  become: true
+  tasks:
+    - name: Atualizar cache do apt
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Instalar Docker e Docker Compose
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+
+    - name: Iniciar o Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Adicionar usuario ubuntu ao grupo docker
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Criar pasta do app
+      file:
+        path: /home/ubuntu/app
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copiar docker-compose de Producao
+      copy:
+        src: /project/docker-compose.prod.yml
+        dest: /home/ubuntu/app/docker-compose.yml
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Criar arquivo .env com segredos
+      copy:
+        dest: /home/ubuntu/app/.env
+        content: |
+          DB_PASSWORD=SenhaForteProd123
+          REDIS_PASSWORD=SenhaForteProd123
+          SPRING_PROFILES_ACTIVE=prod
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Parar containers antigos
+      command: docker-compose down
+      args:
+        chdir: /home/ubuntu/app
+      ignore_errors: yes
+
+    - name: Subir a aplicacao
+      command: docker-compose up -d
+      args:
+        chdir: /home/ubuntu/app
