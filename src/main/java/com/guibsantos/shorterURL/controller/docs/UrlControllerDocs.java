@@ -4,6 +4,7 @@ import com.guibsantos.shorterURL.controller.dto.request.ShortenUrlRequest;
 import com.guibsantos.shorterURL.controller.dto.response.ShortenUrlResponse;
 import com.guibsantos.shorterURL.controller.dto.response.UrlStatsResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,4 +38,17 @@ public interface UrlControllerDocs {
             @ApiResponse(responseCode = "404", description = "Código não encontrado ou expirado", content = @Content)
     })
     ResponseEntity<Void> redirect(String shortCode);
+
+    @Operation(
+            summary = "Deletar URL Encurtada",
+            description = "Remove o link do banco de dados e libera o código para uso futuro."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Sucesso: Conteúdo deletado"),
+            @ApiResponse(responseCode = "404", description = "Erro: URL não encontrada")
+    })
+    ResponseEntity<Void> deleteUrl(
+            @Parameter(description = "O código curto da URL (ex: a1b2c3)", required = true)
+            String shortCode
+    );
 }

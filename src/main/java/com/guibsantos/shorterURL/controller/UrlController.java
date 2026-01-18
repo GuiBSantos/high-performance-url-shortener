@@ -4,6 +4,7 @@ import com.guibsantos.shorterURL.controller.docs.UrlControllerDocs;
 import com.guibsantos.shorterURL.controller.dto.request.ShortenUrlRequest;
 import com.guibsantos.shorterURL.controller.dto.response.ShortenUrlResponse;
 import com.guibsantos.shorterURL.controller.dto.response.UrlStatsResponse;
+import com.guibsantos.shorterURL.entity.UserEntity;
 import com.guibsantos.shorterURL.service.UrlService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -32,7 +34,11 @@ public class UrlController implements UrlControllerDocs {
     @PostMapping("/api/shorten")
     public ResponseEntity<ShortenUrlResponse> shortenUrl(@RequestBody @Valid ShortenUrlRequest request,
                                                          HttpServletRequest servletRequest) {
-        var response = urlService.shortenUrl(request, servletRequest);
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        var user = (UserEntity) authentication.getPrincipal();
+
+        var response = urlService.shortenUrl(request, servletRequest, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -45,5 +51,15 @@ public class UrlController implements UrlControllerDocs {
         headers.setLocation(URI.create(url.getOriginalUrl()));
 
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+    @Override
+    @DeleteMapping("api/urls/{shortCode}")
+    public ResponseEntity<Void> deleteUrl(@PathVariable String shortCode) {
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        var user = (UserEntity) authentication.getPrincipal();
+
+        urlService.deleteUrl(shortCode, user);
+        return ResponseEntity.noContent().build();
     }
 }

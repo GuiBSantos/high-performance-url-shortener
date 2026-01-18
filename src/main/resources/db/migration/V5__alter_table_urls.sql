@@ -1,0 +1,1 @@
+ALTER TABLE urls RENAME COLUMN update_at to updated_at;

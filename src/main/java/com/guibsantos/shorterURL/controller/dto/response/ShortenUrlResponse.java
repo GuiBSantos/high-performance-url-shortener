@@ -1,4 +1,6 @@
 package com.guibsantos.shorterURL.controller.dto.response;
 
-public record ShortenUrlResponse(String url, String shortCode, String shortUrl) {
+import java.time.LocalDateTime;
+
+public record ShortenUrlResponse(String url, String shortCode, String shortUrl, LocalDateTime expiresAt) {
 }

@@ -5,12 +5,15 @@ import com.guibsantos.shorterURL.controller.dto.request.ShortenUrlRequest;
 import com.guibsantos.shorterURL.controller.dto.response.ShortenUrlResponse;
 import com.guibsantos.shorterURL.controller.dto.response.UrlStatsResponse;
 import com.guibsantos.shorterURL.controller.exception.UrlNotFoundException;
+import com.guibsantos.shorterURL.entity.Role;
 import com.guibsantos.shorterURL.entity.UrlEntity;
+import com.guibsantos.shorterURL.entity.UserEntity;
 import com.guibsantos.shorterURL.repository.UrlRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +33,7 @@ public class UrlService {
     private static final int CACHE_TTL_MINUTES = 10;
 
     @Transactional
-    public ShortenUrlResponse shortenUrl(ShortenUrlRequest request, HttpServletRequest servletRequest) {
+    public ShortenUrlResponse shortenUrl(ShortenUrlRequest request, HttpServletRequest servletRequest, UserEntity user) {
         String shortCode;
 
         do {
@@ -41,6 +44,7 @@ public class UrlService {
                 .originalUrl(request.url())
                 .shortCode(shortCode)
                 .expiresAt(LocalDateTime.now().plusDays(30))
+                .user(user)
                 .build();
 
         urlRepository.save(entity);
@@ -50,19 +54,18 @@ public class UrlService {
 
         var redirectUrl = servletRequest.getRequestURL().toString().replace("/api/shorten", "/" + shortCode);
 
-        return new ShortenUrlResponse(entity.getOriginalUrl(), entity.getShortCode(), redirectUrl);
+        return new ShortenUrlResponse(entity.getOriginalUrl(), entity.getShortCode(), redirectUrl, entity.getExpiresAt());
     }
 
     public UrlEntity getOriginalUrl(String shortCode) {
         String cacheKey = "url:" + shortCode;
         UrlEntity urlEntity = null;
 
-       Object cachedObject = redisTemplate.opsForValue().get(cacheKey);
+        Object cachedObject = redisTemplate.opsForValue().get(cacheKey);
 
         if (cachedObject != null) {
-            log.info("Cache Hit! Recuperado do Redis: {}", shortCode);
-
             try {
+
                 urlEntity = objectMapper.convertValue(cachedObject, UrlEntity.class);
                 log.info("Cache Hit! Recuperado do Redis: {}", shortCode);
             } catch (Exception e) {
@@ -72,8 +75,17 @@ public class UrlService {
 
         if (urlEntity == null) {
             log.warn("Cache MISS: Codigo {} nao encontrado no Redis. Buscando no banco...", shortCode);
-            urlEntity = urlRepository.findByShortCode(shortCode).
-                    orElseThrow(() -> new UrlNotFoundException("Url not found"));
+            urlEntity = urlRepository.findByShortCode(shortCode)
+                    .orElseThrow(() -> new UrlNotFoundException("Url não encontrada!"));
+        }
+
+        if(urlEntity.getExpiresAt() != null && urlEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
+
+            redisTemplate.delete(cacheKey);
+
+            urlRepository.delete(urlEntity);
+            log.warn("URL eexpirada tentada acessar: {}", shortCode);
+            throw new UrlNotFoundException("Esta URL expirou e não está mais disponível.");
         }
 
         if (urlEntity.getAccessCount() == null) {
@@ -81,7 +93,7 @@ public class UrlService {
         }
         urlEntity.setAccessCount(urlEntity.getAccessCount() + 1);
 
-        log.info("Atualizando contador no cache e banco para: {}", shortCode);
+        log.info("Atualizando contador para: {}", shortCode);
         redisTemplate.opsForValue().set(cacheKey, urlEntity, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
 
         urlRepository.save(urlEntity);
@@ -89,7 +101,7 @@ public class UrlService {
         return urlEntity;
     }
 
-    public UrlStatsResponse getUrlStats (String shortCode) {
+    public UrlStatsResponse getUrlStats(String shortCode) {
         String cacheKey = "url:" + shortCode;
         UrlEntity entity = null;
 
@@ -98,7 +110,7 @@ public class UrlService {
         if (cachedObject != null) {
             try {
                 entity = objectMapper.convertValue(cachedObject, UrlEntity.class);
-            } catch (Exception e ) {
+            } catch (Exception e) {
                 log.error("Erro ao ler stats do cache", e);
             }
         }
@@ -109,6 +121,28 @@ public class UrlService {
         }
 
         return new UrlStatsResponse(entity.getOriginalUrl(), entity.getShortCode(), entity.getAccessCount());
+    }
+
+    @Transactional
+    public void deleteUrl(String shortCode, UserEntity currentUser) {
+
+        var url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Url não encontrada"));
+
+        boolean isOwner =
+                url.getUser() != null &&
+                        url.getUser().getId().equals(currentUser.getId());
+
+        boolean isAdmin =
+                currentUser.getRole() == Role.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new RuntimeException("Você não tem permissão para deletar essa URL!");
+        }
+
+        urlRepository.delete(url);
+
+        redisTemplate.delete("url:" + shortCode);
     }
 
     private String generateRandomCode() {

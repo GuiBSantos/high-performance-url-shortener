@@ -16,10 +16,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class UrlEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
@@ -33,8 +35,8 @@ public class UrlEntity {
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "update_at")
-    private LocalDateTime updateAt;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
@@ -42,4 +44,12 @@ public class UrlEntity {
     @Builder.Default
     @Column(name = "access_count")
     private Long accessCount = 0L;
+
+    @Column(name = "access_limit", nullable = true)
+    private Long accessLimit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @ToString.Exclude
+    private UserEntity user;
 }
