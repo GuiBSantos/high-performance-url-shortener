@@ -6,6 +6,10 @@ import org.hibernate.validator.constraints.URL;
 public record ShortenUrlRequest(
         @NotBlank(message = "A URL não pode estar vazia.")
         @URL(message = "URL inválida.")
-        String url
+        String url,
+
+        Integer maxClicks,
+
+        Long expirationTimeInMinutes
 ) {
 }

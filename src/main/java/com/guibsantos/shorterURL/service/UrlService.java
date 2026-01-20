@@ -13,12 +13,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -31,6 +32,11 @@ public class UrlService {
     private final ObjectMapper objectMapper;
 
     private static final int CACHE_TTL_MINUTES = 10;
+    private final RestClient.Builder builder;
+
+    public List<UrlEntity> getUserUrls(UserEntity user) {
+        return urlRepository.findAllByUserOrderByCreatedAtDesc(user);
+    }
 
     @Transactional
     public ShortenUrlResponse shortenUrl(ShortenUrlRequest request, HttpServletRequest servletRequest, UserEntity user) {
@@ -40,13 +46,20 @@ public class UrlService {
             shortCode = generateRandomCode();
         } while (urlRepository.findByShortCode(shortCode).isPresent());
 
-        var entity = UrlEntity.builder()
+        var builder = UrlEntity.builder()
                 .originalUrl(request.url())
                 .shortCode(shortCode)
-                .expiresAt(LocalDateTime.now().plusDays(30))
                 .user(user)
-                .build();
+                .accessCount(0L)
+                .maxClicks(request.maxClicks());
 
+        if (request.expirationTimeInMinutes() != null) {
+            builder.expiresAt(LocalDateTime.now().plusMinutes(request.expirationTimeInMinutes()));
+        } else {
+            builder.expiresAt(LocalDateTime.now().plusDays(30));
+        }
+
+       var entity = builder.build();
         urlRepository.save(entity);
 
         String cacheKey = "url:" + shortCode;
@@ -54,7 +67,14 @@ public class UrlService {
 
         var redirectUrl = servletRequest.getRequestURL().toString().replace("/api/shorten", "/" + shortCode);
 
-        return new ShortenUrlResponse(entity.getOriginalUrl(), entity.getShortCode(), redirectUrl, entity.getExpiresAt());
+        String dataExpiracao = entity.getExpiresAt() != null ? entity.getExpiresAt().toString() : null;
+
+        return new ShortenUrlResponse(
+                entity.getOriginalUrl(),
+                entity.getShortCode(),
+                redirectUrl,
+                entity.getExpiresAt()
+        );
     }
 
     public UrlEntity getOriginalUrl(String shortCode) {
@@ -65,7 +85,6 @@ public class UrlService {
 
         if (cachedObject != null) {
             try {
-
                 urlEntity = objectMapper.convertValue(cachedObject, UrlEntity.class);
                 log.info("Cache Hit! Recuperado do Redis: {}", shortCode);
             } catch (Exception e) {
@@ -79,13 +98,20 @@ public class UrlService {
                     .orElseThrow(() -> new UrlNotFoundException("Url não encontrada!"));
         }
 
-        if(urlEntity.getExpiresAt() != null && urlEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (urlEntity.getExpiresAt() != null && urlEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
+            redisTemplate.delete(cacheKey);
+            urlRepository.delete(urlEntity);
+            log.warn("URL expirada tentada acessar: {}", shortCode);
+            throw new UrlNotFoundException("Esta URL expirou e não está mais disponível.");
+        }
+
+        if (urlEntity.getMaxClicks() != null && urlEntity.getAccessCount() >= urlEntity.getMaxClicks()) {
 
             redisTemplate.delete(cacheKey);
-
             urlRepository.delete(urlEntity);
-            log.warn("URL eexpirada tentada acessar: {}", shortCode);
-            throw new UrlNotFoundException("Esta URL expirou e não está mais disponível.");
+
+            log.warn("URL atingiu o limite de cliques: {}", shortCode);
+            throw new UrlNotFoundException("Esta URL atingiu o limite máximo de acessos.");
         }
 
         if (urlEntity.getAccessCount() == null) {
@@ -93,10 +119,20 @@ public class UrlService {
         }
         urlEntity.setAccessCount(urlEntity.getAccessCount() + 1);
 
-        log.info("Atualizando contador para: {}", shortCode);
-        redisTemplate.opsForValue().set(cacheKey, urlEntity, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        if (urlEntity.getMaxClicks() != null && urlEntity.getAccessCount() >= urlEntity.getMaxClicks()) {
 
-        urlRepository.save(urlEntity);
+            log.info("URL {} atingiu o limite de {} cliques. Deletando...", shortCode, urlEntity.getMaxClicks());
+
+            urlRepository.delete(urlEntity);
+            redisTemplate.delete(cacheKey);
+
+        } else {
+
+            log.info("Contabilizando clique para: {} (Total: {})", shortCode, urlEntity.getAccessCount());
+
+            urlRepository.save(urlEntity);
+            redisTemplate.opsForValue().set(cacheKey, urlEntity, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        }
 
         return urlEntity;
     }
@@ -129,19 +165,22 @@ public class UrlService {
         var url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException("Url não encontrada"));
 
-        boolean isOwner =
-                url.getUser() != null &&
-                        url.getUser().getId().equals(currentUser.getId());
+        if (url.getUser() == null) {
+            if (currentUser.getRole() != Role.ADMIN) {
+                throw new RuntimeException("Esta URL é pública e não pode ser deletada por você.");
+            }
+        } else {
 
-        boolean isAdmin =
-                currentUser.getRole() == Role.ADMIN;
+            boolean isOwner = url.getUser().getId().equals(currentUser.getId());
+            boolean isAdmin = currentUser.getRole() == Role.ADMIN;
 
-        if (!isOwner && !isAdmin) {
-            throw new RuntimeException("Você não tem permissão para deletar essa URL!");
+            if (!isOwner && !isAdmin) {
+
+                throw new RuntimeException("Você não tem permissão para deletar essa URL!");
+            }
         }
 
         urlRepository.delete(url);
-
         redisTemplate.delete("url:" + shortCode);
     }
 

@@ -3,10 +3,14 @@ package com.guibsantos.shorterURL.controller.docs;
 import com.guibsantos.shorterURL.controller.dto.request.LoginRequest;
 import com.guibsantos.shorterURL.controller.dto.request.RegisterRequest;
 import com.guibsantos.shorterURL.controller.dto.response.LoginResponse;
+import com.guibsantos.shorterURL.controller.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,4 +38,13 @@ public interface AuthControllerDocs {
             @ApiResponse(responseCode = "403", description = "Usuário ou senha inválidos")
     })
     ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request);
+
+    @Operation(summary = "Perfil do Usuário", description = "Retorna os dados do usuário logado (baseado no Token)")
+    @SecurityRequirement(name = "bearer-key")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dados recuperados com sucesso",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Token inválido ou não enviado")
+    })
+    ResponseEntity<UserResponse> getMyProfile();
 }

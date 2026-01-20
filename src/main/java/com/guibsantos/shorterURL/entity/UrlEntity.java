@@ -1,5 +1,6 @@
 package com.guibsantos.shorterURL.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -41,15 +42,16 @@ public class UrlEntity {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Column(name = "access_limit")
+    private Integer maxClicks;
+
     @Builder.Default
     @Column(name = "access_count")
     private Long accessCount = 0L;
 
-    @Column(name = "access_limit", nullable = true)
-    private Long accessLimit;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     @ToString.Exclude
+    @JsonIgnore
     private UserEntity user;
 }

@@ -9,13 +9,25 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.List;
+
 @Tag(name = "URL Shortener", description = "Endpoints para gerenciar e encurtar URLs")
 public interface UrlControllerDocs {
+
+    @Operation(summary = "Listar Minhas URLs", description = "Retorna o histórico de todas as URLs criadas pelo usuário logado")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista recuperada com sucesso",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShortenUrlResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Não autorizado (Token inválido ou ausente)")
+    })
+    @SecurityRequirement(name = "bearer-key")
+    ResponseEntity<List<ShortenUrlResponse>> getUserUrls();
 
     @Operation(summary = "Obter estatísticas da URL", description = "Retorna o número total de acessos (cliques) de uma URL encurtada")
     @ApiResponses(value = {
@@ -30,6 +42,7 @@ public interface UrlControllerDocs {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShortenUrlResponse.class))),
             @ApiResponse(responseCode = "400", description = "URL inválida ou payload mal formatado", content = @Content)
     })
+    @SecurityRequirement(name = "bearer-key")
     ResponseEntity<ShortenUrlResponse> shortenUrl(ShortenUrlRequest request, HttpServletRequest servletRequest);
 
     @Operation(summary = "Redirecionar", description = "Recebe um código encurtado e redireciona para a URL original.")
