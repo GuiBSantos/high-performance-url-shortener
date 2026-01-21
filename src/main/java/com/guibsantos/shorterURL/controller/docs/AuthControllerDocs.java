@@ -47,4 +47,19 @@ public interface AuthControllerDocs {
             @ApiResponse(responseCode = "403", description = "Token inválido ou não enviado")
     })
     ResponseEntity<UserResponse> getMyProfile();
+
+    @Operation(summary = "Verificar disponibilidade de Usuário", description = "Retorna TRUE se o nome de usuário JÁ EXISTE (indisponível) e FALSE se estiver livre.")
+    @ApiResponse(responseCode = "200", description = "Verificação realizada")
+    ResponseEntity<Boolean> checkUsername(
+            @Parameter(description = "O username para verificar", example = "jinx5")
+            String username
+    );
+
+    @Operation(summary = "Verificar disponibilidade de E-mail", description = "Retorna TRUE se o e-mail JÁ EXISTE (indisponível) e FALSE se estiver livre.")
+    @ApiResponse(responseCode = "200", description = "Verificação realizada")
+    ResponseEntity<Boolean> checkEmail(
+            @Parameter(description = "O e-mail para verificar", example = "teste@email.com")
+            String email
+    );
+
 }

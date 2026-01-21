@@ -6,6 +6,7 @@ import com.guibsantos.shorterURL.controller.dto.request.RegisterRequest;
 import com.guibsantos.shorterURL.controller.dto.response.LoginResponse;
 import com.guibsantos.shorterURL.controller.dto.response.UserResponse;
 import com.guibsantos.shorterURL.entity.UserEntity;
+import com.guibsantos.shorterURL.repository.UserRepository; // <--- Importante: Importar o Repository
 import com.guibsantos.shorterURL.service.TokenService;
 import com.guibsantos.shorterURL.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +24,11 @@ public class AuthController implements AuthControllerDocs {
     private final UserService userService;
     private final TokenService tokenService;
     private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
 
     @Override
     @PostMapping("/register")
+
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
         userService.registerUser(request);
         return ResponseEntity.ok("Usuário registrado com sucesso!");
@@ -34,11 +37,12 @@ public class AuthController implements AuthControllerDocs {
     @Override
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-
-        var usernamePassword = new UsernamePasswordAuthenticationToken(request.username(), request.password());
+        var usernamePassword = new UsernamePasswordAuthenticationToken(request.email(), request.password());
         var auth = authenticationManager.authenticate(usernamePassword);
+
         var user = (UserEntity) auth.getPrincipal();
         var token = tokenService.generateToken(user);
+
         return ResponseEntity.ok(new LoginResponse(token));
     }
 
@@ -57,5 +61,21 @@ public class AuthController implements AuthControllerDocs {
             ));
         }
         return ResponseEntity.status(403).build();
+    }
+
+    @Override
+    @GetMapping("/check-username/{username}")
+    public ResponseEntity<Boolean> checkUsername(@PathVariable String username) {
+
+        boolean exists = userRepository.existsByUsername(username);
+        return ResponseEntity.ok(exists);
+    }
+
+    @Override
+    @GetMapping("/check-email")
+    public ResponseEntity<Boolean> checkEmail(@RequestParam("value") String email) {
+
+        boolean exists = userRepository.existsByEmail(email);
+        return ResponseEntity.ok(exists);
     }
 }
