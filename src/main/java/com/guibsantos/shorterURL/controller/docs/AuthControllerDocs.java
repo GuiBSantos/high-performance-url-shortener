@@ -1,7 +1,6 @@
 package com.guibsantos.shorterURL.controller.docs;
 
-import com.guibsantos.shorterURL.controller.dto.request.LoginRequest;
-import com.guibsantos.shorterURL.controller.dto.request.RegisterRequest;
+import com.guibsantos.shorterURL.controller.dto.request.*;
 import com.guibsantos.shorterURL.controller.dto.response.LoginResponse;
 import com.guibsantos.shorterURL.controller.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@Tag(name = "Autenticação", description = "Endpoints para registro e login de usuários")
+@Tag(name = "Autenticação", description = "Endpoints para registro, login e recuperação de senha")
 public interface AuthControllerDocs {
 
     @Operation(
@@ -60,6 +59,65 @@ public interface AuthControllerDocs {
     ResponseEntity<Boolean> checkEmail(
             @Parameter(description = "O e-mail para verificar", example = "teste@email.com")
             String email
+    );
+
+    @Operation(
+            summary = "Alterar senha do usuário (Logado)",
+            description = "Permite que um usuário já autenticado altere sua senha. Requer a senha atual para validação."
+    )
+    @SecurityRequirement(name = "bearer-key")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Senha alterada com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Token inválido ou não informado"),
+            @ApiResponse(responseCode = "400", description = "Senha atual incorreta ou nova senha inválida"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    ResponseEntity<Void> changePassword(
+            @Parameter(description = "Objeto contendo a senha atual e a nova senha", required = true)
+            @RequestBody ChangePasswordRequest request
+    );
+
+
+    @Operation(
+            summary = "Solicitar código de recuperação (Esqueci a Senha)",
+            description = "Envia um e-mail com um código de 6 dígitos para o usuário, caso o e-mail esteja cadastrado."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Se o e-mail existir, o código foi enviado"),
+            @ApiResponse(responseCode = "404", description = "E-mail não encontrado no sistema"),
+            @ApiResponse(responseCode = "500", description = "Erro ao enviar o e-mail")
+    })
+    ResponseEntity<Void> forgotPassword(
+            @Parameter(description = "JSON contendo apenas o e-mail do usuário", required = true)
+            @RequestBody ForgotPasswordRequest request
+    );
+
+    @Operation(
+            summary = "Redefinir senha com código",
+            description = "Valida o código recebido por e-mail e define a nova senha do usuário."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Senha redefinida com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Código inválido, expirado ou dados incorretos"),
+            @ApiResponse(responseCode = "404", description = "E-mail não encontrado")
+    })
+    ResponseEntity<Void> resetPassword(
+            @Parameter(description = "JSON contendo e-mail, código recebido e nova senha", required = true)
+            @RequestBody ResetPasswordRequest request
+    );
+
+    @Operation(
+            summary = "Validar código de recuperação (Passo 2)",
+            description = "Verifica se o código digitado está correto e não expirou, antes de permitir que o usuário digite a nova senha."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Código válido, pode prosseguir para a nova senha"),
+            @ApiResponse(responseCode = "400", description = "Código incorreto ou expirado"),
+            @ApiResponse(responseCode = "404", description = "E-mail não encontrado")
+    })
+    ResponseEntity<Void> validateCode(
+            @Parameter(description = "JSON contendo e-mail e o código de 6 dígitos", required = true)
+            @RequestBody ValidateCodeRequest request
     );
 
 }
