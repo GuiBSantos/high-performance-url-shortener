@@ -9,6 +9,7 @@ import com.guibsantos.shorterURL.repository.UserRepository;
 import com.guibsantos.shorterURL.service.AuthService;
 import com.guibsantos.shorterURL.service.TokenService;
 import com.guibsantos.shorterURL.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,13 +38,24 @@ public class AuthController implements AuthControllerDocs {
     @Override
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        var usernamePassword = new UsernamePasswordAuthenticationToken(request.email(), request.password());
-        var auth = authenticationManager.authenticate(usernamePassword);
+        try {
+            var usernamePassword = new UsernamePasswordAuthenticationToken(request.email(), request.password());
+            var auth = authenticationManager.authenticate(usernamePassword);
 
-        var user = (UserEntity) auth.getPrincipal();
-        var token = tokenService.generateToken(user);
+            var user = (UserEntity) auth.getPrincipal();
+            var token = tokenService.generateToken(user);
 
-        return ResponseEntity.ok(new LoginResponse(token));
+            return ResponseEntity.ok(new LoginResponse(token));
+
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+
+            throw e;
+        }
     }
 
     @Override
@@ -85,21 +97,39 @@ public class AuthController implements AuthControllerDocs {
         return ResponseEntity.ok(exists);
     }
 
+    @Override
     @PostMapping("/forgot-password")
     public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.email());
         return ResponseEntity.ok().build();
     }
 
+    @Override
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request.email(), request.code(), request.newPassword());
         return ResponseEntity.ok().build();
     }
 
+    @Override
     @PostMapping("/validate-code")
     public ResponseEntity<Void> validateCode(@RequestBody ValidateCodeRequest request) {
         authService.validateRecoveryCode(request.email(), request.code());
         return ResponseEntity.ok().build();
     }
+
+    @Override
+    @PatchMapping("/update-username")
+    public ResponseEntity<Void> updateUsername(@RequestBody @Valid UpdateUsernameRequest request) {
+        authService.updateUsername(request.newUsername());
+        return ResponseEntity.ok().build();
+    }
+
+    @Override
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<Void> deleteAccount(@RequestBody @Valid DeleteAccountRequest request) {
+        authService.deleteAccount(request.password());
+        return ResponseEntity.ok().build();
+    }
+
 }

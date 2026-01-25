@@ -3,12 +3,11 @@ package com.guibsantos.shorterURL.service;
 import com.guibsantos.shorterURL.controller.dto.request.ChangePasswordRequest;
 import com.guibsantos.shorterURL.entity.UserEntity;
 import com.guibsantos.shorterURL.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder; // <--- Importante
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -17,14 +16,16 @@ import java.util.Random;
 @Service
 public class AuthService implements UserDetailsService {
 
-    @Autowired
-    private EmailService emailService;
+    private final EmailProducer emailProducer;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       EmailProducer emailProducer) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailProducer = emailProducer;
     }
 
     @Override
@@ -35,7 +36,6 @@ public class AuthService implements UserDetailsService {
 
     public void changePassword(ChangePasswordRequest request) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-
         String username = authentication.getName();
 
         UserEntity user = userRepository.findByUsername(username)
@@ -59,7 +59,13 @@ public class AuthService implements UserDetailsService {
         user.setRecoveryCodeExpiration(LocalDateTime.now().plusMinutes(10));
         userRepository.save(user);
 
-        emailService.sendRecoveryEmail(email, code);
+        String subject = "Recuperação de Senha - ShorterURL";
+        String body = "<h3>Olá, " + user.getUsername() + "!</h3>" +
+                "<p>Seu código de recuperação é:</p>" +
+                "<h1>" + code + "</h1>" +
+                "<p>Válido por 10 minutos.</p>";
+
+        emailProducer.sendEmailMessage(email, subject, body);
     }
 
     public void resetPassword(String email, String code, String newPassword) {
@@ -93,4 +99,30 @@ public class AuthService implements UserDetailsService {
         }
     }
 
+    public void updateUsername(String newUsername) {
+        String clearUsername = newUsername.trim();
+
+        if (userRepository.existsByUsername(clearUsername)) {
+            throw new RuntimeException("Este nome de usuário já está em uso.");
+        }
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        UserEntity user = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+
+        user.setUsername(clearUsername);
+        userRepository.save(user);
+    }
+
+    public void deleteAccount(String password) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        UserEntity user = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Senha incorreta. Não foi possível excluir a conta.");
+        }
+
+        userRepository.delete(user);
+    }
 }

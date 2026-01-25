@@ -37,17 +37,21 @@ public class UserService {
 
     public void registerUser(RegisterRequest request) {
 
-        if (userRepository.existsByUsername(request.username())) {
+        String cleanUsername = request.username().trim();
+
+        String cleanEmail = request.email().trim().toLowerCase();
+
+        if (userRepository.existsByUsername(cleanUsername)) {
             throw new RuntimeException("Username já existe!");
         }
 
-        if(userRepository.existsByEmail(request.email())) {
+        if(userRepository.existsByEmail(cleanEmail)) {
             throw new RuntimeException("Email já está em uso!");
         }
 
         var user = UserEntity.builder()
-                .username(request.username())
-                .email(request.email())
+                .username(cleanUsername)
+                .email(cleanEmail)
                 .password(passwordEncoder.encode(request.password()))
                 .role(Role.USER)
                 .build();

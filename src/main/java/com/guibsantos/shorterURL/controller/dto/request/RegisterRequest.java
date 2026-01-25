@@ -12,11 +12,12 @@ public record RegisterRequest(
         @Pattern(regexp = "^[a-zA-Z0-9._]+$", message = "Username deve conter apenas letras, números, ponto ou underline")
         String username,
 
-        @NotBlank(message = "O email é obrigatório")
-        @Email(message = "Formato de email inválido")
+        @NotBlank(message = "O e-mail é obrigatório")
+        @Email(message = "Formato de e-mail inválido")
+        @Size(max = 100, message = "O e-mail é muito longo")
         String email,
 
         @NotBlank
-        @Size(min = 6, message = "A senha deve ter no mínimo 6 caracteres")
+        @Size(min = 8, max = 64, message = "A senha deve ter entre 8 e 64 caracteres")
         String password
 ) {}

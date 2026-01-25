@@ -40,14 +40,19 @@ public class UrlService {
 
     @Transactional
     public ShortenUrlResponse shortenUrl(ShortenUrlRequest request, HttpServletRequest servletRequest, UserEntity user) {
-        String shortCode;
 
+        String originalUrl = request.url().trim();
+        if (!originalUrl.startsWith("http://") && !originalUrl.startsWith("https://")) {
+            originalUrl = "https://" + originalUrl;
+        }
+
+        String shortCode;
         do {
             shortCode = generateRandomCode();
         } while (urlRepository.findByShortCode(shortCode).isPresent());
 
         var builder = UrlEntity.builder()
-                .originalUrl(request.url())
+                .originalUrl(originalUrl)
                 .shortCode(shortCode)
                 .user(user)
                 .accessCount(0L)
@@ -59,15 +64,13 @@ public class UrlService {
             builder.expiresAt(LocalDateTime.now().plusDays(30));
         }
 
-       var entity = builder.build();
+        var entity = builder.build();
         urlRepository.save(entity);
 
         String cacheKey = "url:" + shortCode;
         redisTemplate.opsForValue().set(cacheKey, entity, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
 
         var redirectUrl = servletRequest.getRequestURL().toString().replace("/api/shorten", "/" + shortCode);
-
-        String dataExpiracao = entity.getExpiresAt() != null ? entity.getExpiresAt().toString() : null;
 
         return new ShortenUrlResponse(
                 entity.getOriginalUrl(),

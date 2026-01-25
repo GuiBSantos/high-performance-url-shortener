@@ -12,9 +12,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
-@Tag(name = "Autenticação", description = "Endpoints para registro, login e recuperação de senha")
+@Tag(name = "Autenticação", description = "Endpoints para registro, login, perfil e recuperação de senha")
 public interface AuthControllerDocs {
 
     @Operation(
@@ -51,14 +53,14 @@ public interface AuthControllerDocs {
     @ApiResponse(responseCode = "200", description = "Verificação realizada")
     ResponseEntity<Boolean> checkUsername(
             @Parameter(description = "O username para verificar", example = "jinx5")
-            String username
+            @PathVariable String username
     );
 
     @Operation(summary = "Verificar disponibilidade de E-mail", description = "Retorna TRUE se o e-mail JÁ EXISTE (indisponível) e FALSE se estiver livre.")
     @ApiResponse(responseCode = "200", description = "Verificação realizada")
     ResponseEntity<Boolean> checkEmail(
             @Parameter(description = "O e-mail para verificar", example = "teste@email.com")
-            String email
+            @RequestParam("value") String email
     );
 
     @Operation(
@@ -120,4 +122,33 @@ public interface AuthControllerDocs {
             @RequestBody ValidateCodeRequest request
     );
 
+    @Operation(
+            summary = "Atualizar Username",
+            description = "Atualiza o nome de usuário da conta logada. Requer que o novo nome esteja disponível."
+    )
+    @SecurityRequirement(name = "bearer-key")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Username atualizado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Nome de usuário já existe ou inválido"),
+            @ApiResponse(responseCode = "403", description = "Token inválido")
+    })
+    ResponseEntity<Void> updateUsername(
+            @Parameter(description = "Novo username desejado", required = true)
+            @RequestBody UpdateUsernameRequest request
+    );
+
+    @Operation(
+            summary = "Excluir Conta",
+            description = "Exclui permanentemente a conta do usuário e todos os dados relacionados (URLs, etc). Requer confirmação de senha."
+    )
+    @SecurityRequirement(name = "bearer-key")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Conta excluída com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Senha incorreta"),
+            @ApiResponse(responseCode = "403", description = "Token inválido")
+    })
+    ResponseEntity<Void> deleteAccount(
+            @Parameter(description = "Senha atual para confirmação", required = true)
+            @RequestBody DeleteAccountRequest request
+    );
 }
