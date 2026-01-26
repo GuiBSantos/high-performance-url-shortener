@@ -1,6 +1,7 @@
 package com.guibsantos.shorterURL.controller.docs;
 
 import com.guibsantos.shorterURL.controller.dto.request.*;
+import com.guibsantos.shorterURL.controller.dto.response.GoogleLoginResponse;
 import com.guibsantos.shorterURL.controller.dto.response.LoginResponse;
 import com.guibsantos.shorterURL.controller.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +40,20 @@ public interface AuthControllerDocs {
             @ApiResponse(responseCode = "403", description = "Usuário ou senha inválidos")
     })
     ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request);
+
+    @Operation(
+            summary = "Login/Registro com Google",
+            description = "Autentica o usuário validando o token do Google. Se o usuário não existir, cria uma conta automaticamente e salva a foto de perfil. Retorna um Token JWT."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login/Registro realizado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Token do Google inválido ou expirado"),
+            @ApiResponse(responseCode = "500", description = "Erro na comunicação com Google API")
+    })
+    ResponseEntity<GoogleLoginResponse> googleLogin(
+            @Parameter(description = "Token ID retornado pelo SDK do Google no Front-end", required = true)
+            @RequestBody GoogleLoginRequest request
+    );
 
     @Operation(summary = "Perfil do Usuário", description = "Retorna os dados do usuário logado (baseado no Token)")
     @SecurityRequirement(name = "bearer-key")

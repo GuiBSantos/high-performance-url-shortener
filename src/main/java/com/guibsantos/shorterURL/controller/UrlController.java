@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
@@ -33,18 +34,20 @@ public class UrlController implements UrlControllerDocs {
             return ResponseEntity.status(403).build();
         }
         UserEntity user = (UserEntity) authentication.getPrincipal();
+
+        String baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+
         var urls = urlService.getUserUrls(user);
         var response = urls.stream()
                 .map(url -> new ShortenUrlResponse(
                         url.getOriginalUrl(),
                         url.getShortCode(),
-                        "http://10.0.2.2:8080/" + url.getShortCode(),
+                        baseUrl + "/" + url.getShortCode(),
                         url.getExpiresAt()
                 ))
                 .toList();
         return ResponseEntity.ok(response);
     }
-
 
     @Override
     @GetMapping("/api/stats/{shortCode}")
@@ -59,7 +62,6 @@ public class UrlController implements UrlControllerDocs {
                                                          HttpServletRequest servletRequest) {
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-
         var user = (UserEntity) authentication.getPrincipal();
 
         var response = urlService.shortenUrl(request, servletRequest, user);
@@ -76,6 +78,7 @@ public class UrlController implements UrlControllerDocs {
 
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
+
     @Override
     @DeleteMapping("api/urls/{shortCode}")
     public ResponseEntity<Void> deleteUrl(@PathVariable String shortCode) {

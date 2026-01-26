@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -34,7 +35,10 @@ public interface UrlControllerDocs {
             @ApiResponse(responseCode = "200", description = "Estatísticas retornadas com sucesso"),
             @ApiResponse(responseCode = "404", description = "URL não encontrada")
     })
-    ResponseEntity<UrlStatsResponse> getUrlStats(@PathVariable String shortCode);
+    ResponseEntity<UrlStatsResponse> getUrlStats(
+            @Parameter(description = "Código curto", required = true)
+            @PathVariable String shortCode
+    );
 
     @Operation(summary = "Encurtar URL", description = "Recebe uma URL original e retorna um código encurtado de 6 caracteres.")
     @ApiResponses(value = {
@@ -43,14 +47,20 @@ public interface UrlControllerDocs {
             @ApiResponse(responseCode = "400", description = "URL inválida ou payload mal formatado", content = @Content)
     })
     @SecurityRequirement(name = "bearer-key")
-    ResponseEntity<ShortenUrlResponse> shortenUrl(ShortenUrlRequest request, HttpServletRequest servletRequest);
+    ResponseEntity<ShortenUrlResponse> shortenUrl(
+            @RequestBody ShortenUrlRequest request,
+            @Parameter(hidden = true) HttpServletRequest servletRequest
+    );
 
     @Operation(summary = "Redirecionar", description = "Recebe um código encurtado e redireciona para a URL original.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "302", description = "Redirecionamento encontrado e executado", content = @Content),
             @ApiResponse(responseCode = "404", description = "Código não encontrado ou expirado", content = @Content)
     })
-    ResponseEntity<Void> redirect(String shortCode);
+    ResponseEntity<Void> redirect(
+            @Parameter(description = "Código curto", required = true)
+            @PathVariable String shortCode
+    );
 
     @Operation(
             summary = "Deletar URL Encurtada",
@@ -60,8 +70,9 @@ public interface UrlControllerDocs {
             @ApiResponse(responseCode = "204", description = "Sucesso: Conteúdo deletado"),
             @ApiResponse(responseCode = "404", description = "Erro: URL não encontrada")
     })
+    @SecurityRequirement(name = "bearer-key")
     ResponseEntity<Void> deleteUrl(
             @Parameter(description = "O código curto da URL (ex: a1b2c3)", required = true)
-            String shortCode
+            @PathVariable String shortCode
     );
 }

@@ -2,6 +2,7 @@ package com.guibsantos.shorterURL.controller;
 
 import com.guibsantos.shorterURL.controller.docs.AuthControllerDocs;
 import com.guibsantos.shorterURL.controller.dto.request.*;
+import com.guibsantos.shorterURL.controller.dto.response.GoogleLoginResponse;
 import com.guibsantos.shorterURL.controller.dto.response.LoginResponse;
 import com.guibsantos.shorterURL.controller.dto.response.UserResponse;
 import com.guibsantos.shorterURL.entity.UserEntity;
@@ -53,9 +54,15 @@ public class AuthController implements AuthControllerDocs {
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
             }
-
             throw e;
         }
+    }
+
+    @Override
+    @PostMapping("/google")
+    public ResponseEntity<GoogleLoginResponse> googleLogin(@RequestBody GoogleLoginRequest request) {
+        var response = authService.loginWithGoogle(request.token());
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -131,5 +138,4 @@ public class AuthController implements AuthControllerDocs {
         authService.deleteAccount(request.password());
         return ResponseEntity.ok().build();
     }
-
 }
