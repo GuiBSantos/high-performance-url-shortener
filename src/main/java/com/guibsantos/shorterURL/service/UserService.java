@@ -8,12 +8,20 @@ import com.guibsantos.shorterURL.repository.UserRepository;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailProducer emailProducer;
+
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailProducer emailProducer) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.emailProducer = emailProducer;
+    }
 
     public UserResponse updateAvatar(String username, String avatarUrl) {
         UserEntity user = userRepository.findByUsername(username)
@@ -30,15 +38,10 @@ public class UserService {
         );
     }
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
+    @Transactional
     public void registerUser(RegisterRequest request) {
 
         String cleanUsername = request.username().trim();
-
         String cleanEmail = request.email().trim().toLowerCase();
 
         if (userRepository.existsByUsername(cleanUsername)) {
@@ -57,5 +60,12 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
+
+        emailProducer.sendEmailMessage(
+                cleanEmail,
+                "Bem-vindo ao Shorten!",
+                cleanUsername,
+                "WELCOME"
+        );
     }
 }

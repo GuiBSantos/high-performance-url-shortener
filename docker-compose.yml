@@ -8,8 +8,8 @@ services:
       - "5433:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-      POSTGRES_DB: shortener
+      POSTGRES_PASSWORD: 88675819
+      POSTGRES_DB: shortner_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -24,6 +24,18 @@ services:
     networks:
       - shortener-network
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - shortener-network
+
   app:
     build: .
     container_name: shortener-app
@@ -31,20 +43,25 @@ services:
       - "8080:8080"
     environment:
 
-      DB_URL_PROD: jdbc:postgresql://postgres:5432/shortener
+      DB_URL_PROD: jdbc:postgresql://postgres:5432/shortner_dev
       DB_USER: postgres
-      DB_PASSWORD: 12345
+      DB_PASSWORD: 88675819
 
-      # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: 12345
+
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
 
       SPRING_PROFILES_ACTIVE: prod
 
     depends_on:
       - postgres
       - redis
+      - rabbitmq
     networks:
       - shortener-network
 

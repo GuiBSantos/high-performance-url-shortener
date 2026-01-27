@@ -1,5 +1,7 @@
 package com.guibsantos.shorterURL.config;
 
+import com.guibsantos.shorterURL.config.filter.RateLimitFilter; // <--- 1. Importar
+import com.guibsantos.shorterURL.config.filter.SecurityFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,19 +23,24 @@ public class SecurityConfig {
     @Autowired
     private SecurityFilter securityFilter;
 
+    @Autowired // <--- 2. Injetar o Filtro de Rate Limit
+    private RateLimitFilter rateLimitFilter;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/{shortCode}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/{shortCode}").permitAll() // Redirecionamento público
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/check-username/**", "/auth/check-email/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         .anyRequest().authenticated())
-                        .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 

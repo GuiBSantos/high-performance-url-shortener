@@ -86,6 +86,13 @@ public class AuthService implements UserDetailsService {
                     user.setAvatarUrl(pictureUrl);
 
                     userRepository.save(user);
+
+                    emailProducer.sendEmailMessage(
+                            email,
+                            "Bem-vindo ao Shorten!",
+                            finalUsername,
+                            "WELCOME"
+                    );
                 }
 
                 String jwtToken = tokenService.generateToken(user);
@@ -123,13 +130,10 @@ public class AuthService implements UserDetailsService {
         user.setRecoveryCodeExpiration(LocalDateTime.now().plusMinutes(10));
         userRepository.save(user);
 
-        String subject = "Recuperação de Senha - ShorterURL";
-        String body = "<h3>Olá, " + user.getUsername() + "!</h3>" +
-                "<p>Seu código de recuperação é:</p>" +
-                "<h1>" + code + "</h1>" +
-                "<p>Válido por 10 minutos.</p>";
+        String subject = "Recuperação de Senha - Shorten";
+        String dataPayload = user.getUsername() + ":" + code;
 
-        emailProducer.sendEmailMessage(email, subject, body);
+        emailProducer.sendEmailMessage(email, subject, dataPayload, "RECOVERY");
     }
 
     @Transactional

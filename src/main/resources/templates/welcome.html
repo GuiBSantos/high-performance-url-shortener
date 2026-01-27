@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .header { background-color: #0F172A; padding: 30px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 2px; }
+        .content { padding: 40px 30px; color: #334155; line-height: 1.6; }
+        .welcome-text { font-size: 18px; margin-bottom: 20px; }
+        .btn-container { text-align: center; margin: 30px 0; }
+        .btn { background-color: #3B82F6; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 50px; font-weight: bold; font-size: 16px; display: inline-block; transition: background 0.3s; }
+        .footer { background-color: #F8FAFC; padding: 20px; text-align: center; font-size: 12px; color: #94A3B8; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>SHORTEN</h1>
+    </div>
+    <div class="content">
+        <p class="welcome-text">Olá, <strong th:text="${username}">Usuário</strong>!</p>
+
+        <p>Seja muito bem-vindo ao <strong>Shorten</strong>.</p>
+        <p>Sua conta foi criada com sucesso! Agora você pode começar a simplificar seus links, acompanhar estatísticas de cliques e gerenciar tudo em um só lugar.</p>
+
+        <div class="btn-container">
+            <a href="#" class="btn">Começar a Encurtar</a>
+        </div>
+
+        <p>Se tiver alguma dúvida, nossa equipe está pronta para ajudar.</p>
+    </div>
+    <div class="footer">
+        &copy; 2026 Shorten App. Todos os direitos reservados.<br>
+        Não responda a este e-mail.
+    </div>
+</div>
+</body>
+</html>

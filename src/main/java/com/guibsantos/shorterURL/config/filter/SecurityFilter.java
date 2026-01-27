@@ -1,4 +1,4 @@
-package com.guibsantos.shorterURL.config;
+package com.guibsantos.shorterURL.config.filter;
 
 import com.guibsantos.shorterURL.repository.UserRepository;
 import com.guibsantos.shorterURL.service.TokenService;
